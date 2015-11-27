@@ -13,6 +13,9 @@ import com.facebook.infer.annotation.Assertions;
 import com.facebook.proguard.annotations.DoNotStrip;
 import com.facebook.soloader.SoLoader;
 
+import java.lang.Object;
+import java.lang.reflect.*;
+
 /**
  * Implementation of a write-only map stored in native memory. Use
  * {@link Arguments#createMap()} if you need to stub out creating this class in a test.
@@ -57,6 +60,43 @@ public class WritableNativeMap extends ReadableNativeMap implements WritableMap 
   public void merge(ReadableMap source) {
     Assertions.assertCondition(source instanceof ReadableNativeMap, "Illegal type provided");
     mergeNativeMap((ReadableNativeMap) source);
+  }
+
+  static public WritableNativeMap fromObject(Object object) {
+    WritableMap writableMap = new WritableMap();
+    Field[] fields = object.getClass().getDeclaredFields();
+    for(int fieldIndex = 0; fieldIndex < fields.length; fieldIndex++) {
+      Field field = fields[fieldIndex];
+      field.setAccessible(true);
+
+      //put the value depends on the type of the field
+      String fieldType = field.getGenericType().toString();
+      
+      //String
+      if(fieldType.equals("class.java.lang.String")) {
+        String value = (String) field.get(object);
+        writableMap.putString(field.getName(), value);
+      }
+
+      //Integer
+      if(fieldType.equals("class.java.lang.Integer")) {
+        Integer value = (Integer) field.get(object);
+        writableMap.putInt(field.getName(), value);
+      }
+
+      //Double
+      if(fieldType.equals("class.java.lang.Double")) {
+        Double value = (Double) field.get(object);
+        writableMap.putDouble(field.getName(), value);
+      }
+
+      //Boolean
+      if(fieldType.equals("class.java.lang.Boolean")) {
+        Boolean value = (Boolean) field.get(object);
+        writableMap.putBoolean(field.getName(), value);
+      }
+    }
+    return writableMap;
   }
 
   private native void putNativeMap(String key, WritableNativeMap value);
